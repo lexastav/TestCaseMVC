@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -20,7 +22,7 @@ namespace TestCaseMVC.Controllers
         }
 
         // GET: Projects
-        public async Task<IActionResult> Index(string projectAuthor, string searcString)
+        public async Task<IActionResult> Index(string searchString, string projectAuthor)
         {
             IQueryable<string> authorQuery = from p in _context.Project
                                              orderby p.Author
@@ -29,10 +31,28 @@ namespace TestCaseMVC.Controllers
             var projects = from p in _context.Project
                            select p;
 
-            if (!String.IsNullOrEmpty(searcString))
+            if (!string.IsNullOrEmpty(searchString))
             {
-                projects = projects.Where(s => s.Name.Contains(searcString));
+                projects = projects.Where(s => s.Name.Contains(searchString));
+                if (projects.Count() == 0)
+                {
+                    string url = $"https://api.github.com/search/repositories?q={searchString}";
+                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+                    request.Accept = @"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
+                    request.Headers.Add("Accept-Language", "ru,en-GB;q=0.9,en;q=0.8,en-US;q=0.7");
+                    request.UserAgent = @"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36 Edg/92.0.902.78";
+
+                    HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+                    using (Stream dataStream = response.GetResponseStream())
+                    {
+                        var reader = new StreamReader(dataStream);
+                        string responseFromServer = reader.ReadToEnd();
+                    }
+                        
+                    response.Close();
+                }
             }
+
             if (!string.IsNullOrEmpty(projectAuthor))
             {
                 projects = projects.Where(x => x.Author == projectAuthor);
@@ -45,8 +65,7 @@ namespace TestCaseMVC.Controllers
             };
             return View(projectAuthorVM);
         }
-
-
+      
         // GET: Projects/Details/5
         public async Task<IActionResult> Details(int? id)
         {

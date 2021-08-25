@@ -17,4 +17,9 @@ namespace TestCaseMVC.Models
         public int Watchers { get; set; }
         public string Url { get; set; }
     }
+
+    public class GitJSON
+    {
+        public List<Project> projectList { set; get; }
+    }
 }
